@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+import pysftp, os, urllib, yaml
+from datetime import datetime, timedelta
+from sys import argv
+from prompt_toolkit.shortcuts import checkboxlist_dialog
+
+if not os.path.isfile("credentials.yaml"):
+    print("The file 'credentials.yaml' was not found - Aborting")
+    print("Please create the file by renaming 'example-credentials.yaml' to 'credential.yaml' and edit the file with the real credentials.")
+    exit()
+credentials = yaml.safe_load(open("credentials.yaml"))
+site = credentials["site"]
+username = credentials["username"]
+password = credentials["password"]
+root_dir =  credentials["root_dir"]
+
+if len(argv)!=2:
+    print(f"Usage: {argv[0]} <first letter(s) of file(s) or foler(s) to fetch> (not case senstive)")
+    exit()
+start = argv[1].lower()
+
+#def get_file_list(root_dir, attr):
+#    #breakpoint()
+#    files = {}
+#    fn = attr.filename
+#    is_dir = attr.longname.startswith("d")
+#    #print(is_dir, fn, files_to_fetch)
+#    if is_dir:
+#        for attr_innar in conn.listdir_attr(root_dir+"/"+fn):
+#            files = { **get_file_list(root_dir+"/"+fn, attr_innar ), **files }
+#    else:
+#        files[ root_dir +"/"+fn ] = {}
+#    return files
+
+conn = pysftp.Connection(site, username=username, password=password)
+fns = []
+for attr in conn.listdir_attr(root_dir):
+    fn = attr.filename
+    mod_time = datetime.fromtimestamp(attr.st_mtime)
+    if fn.endswith(".meta"): continue
+    if fn.lower().startswith(start):
+        print(f"Found candidate to fetech: {fn}")
+        fns.append(fn)
+conn.close()
+
+match len(fns):
+    case 0:
+        print("Error: No matched files found - Aboring")
+        exit()
+    case 1:
+        fns_to_fetch = fns
+    case _:
+        v = [ (fn,fn) for fn in fns ]
+        fns_to_fetch = checkboxlist_dialog( values=v, title="Matching Files:", text="Please select file(s) to fetch:",).run()
+for fn_to_fetch in fns_to_fetch:
+    target = f"{root_dir}/{fn_to_fetch}".replace("'", "'\\''")
+    cmd =  f"export MSCP_SSH_AUTH_PASSWORD={password}; mscp -I 4 -n 6 -N {username}@{site}:'{target}' ."
+    print(cmd)
+    os.system(cmd)
