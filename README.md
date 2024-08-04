@@ -17,4 +17,11 @@ Install the liberties:
    
    Usage: ./get_by_sftp \<first letter(s) of file(s) or folder(s) to fetch\> (not case sensitive)
 
-## License:  MIT
+## Author
+
+**Shalom Mitz** - [shalommmitz](https://github.com/shalommmitz)
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE ) file for details.
+
